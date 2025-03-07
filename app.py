@@ -97,8 +97,8 @@ def get_booking_data():
     next_month_open_dates = sorted(set(range(1, days_in_next_month + 1)) - set(next_month_booked_dates))
 
     # ✅ Calculate booking percentages
-    percent_current_month_booked = round((len(current_month_booked_dates) / days_in_current_month) * 100, 2)
-    percent_current_month_open = round((len(current_month_open_dates) / days_in_current_month) * 100, 2)
+    #percent_current_month_booked = round((len(current_month_booked_dates) / days_in_current_month) * 100, 2)
+    #percent_current_month_open = round((len(current_month_open_dates) / days_in_current_month) * 100, 2)
 
     percent_next_month_booked = round((len(next_month_booked_dates) / days_in_next_month) * 100, 2)
     percent_next_month_open = round((len(next_month_open_dates) / days_in_next_month) * 100, 2)
@@ -116,8 +116,8 @@ def get_booking_data():
             "name": current_month,
             "booked_dates": current_month_booked_formatted,
             "open_dates": current_month_open_formatted,
-            "booking_percentage": percent_current_month_booked,
-            "open_percentage": percent_current_month_open
+            #"booking_percentage": percent_current_month_booked,
+            #"open_percentage": percent_current_month_open
         },
         "next_month": {
             "name": next_month,
