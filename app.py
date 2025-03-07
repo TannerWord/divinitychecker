@@ -39,7 +39,7 @@ install_chrome()  # Ensure Chrome is installed
 install_chromedriver()  # Ensure ChromeDriver is installed
 
 def get_booking_data():
-    """Scrapes booking data and returns it as a dictionary with booked and open dates"""
+    """Scrapes booking data and returns it as a dictionary with booked and open dates and percentages"""
 
     # ✅ Setup Selenium WebDriver
     options = webdriver.ChromeOptions()
@@ -87,6 +87,13 @@ def get_booking_data():
     current_month_open_dates = sorted(set(range(1, days_in_current_month + 1)) - set(current_month_booked_dates))
     next_month_open_dates = sorted(set(range(1, days_in_next_month + 1)) - set(next_month_booked_dates))
 
+    # ✅ Calculate booking percentages
+    percent_current_month_booked = round((len(current_month_booked_dates) / days_in_current_month) * 100, 2)
+    percent_current_month_open = round((len(current_month_open_dates) / days_in_current_month) * 100, 2)
+
+    percent_next_month_booked = round((len(next_month_booked_dates) / days_in_next_month) * 100, 2)
+    percent_next_month_open = round((len(next_month_open_dates) / days_in_next_month) * 100, 2)
+
     # ✅ Format dates
     current_month_booked_formatted = [f"{current_month} {day}" for day in current_month_booked_dates]
     next_month_booked_formatted = [f"{next_month} {day}" for day in next_month_booked_dates]
@@ -99,12 +106,16 @@ def get_booking_data():
         "current_month": {
             "name": current_month,
             "booked_dates": current_month_booked_formatted,
-            "open_dates": current_month_open_formatted
+            "open_dates": current_month_open_formatted,
+            "booking_percentage": percent_current_month_booked,
+            "open_percentage": percent_current_month_open
         },
         "next_month": {
             "name": next_month,
             "booked_dates": next_month_booked_formatted,
-            "open_dates": next_month_open_formatted
+            "open_dates": next_month_open_formatted,
+            "booking_percentage": percent_next_month_booked,
+            "open_percentage": percent_next_month_open
         }
     }
 
@@ -121,6 +132,7 @@ def run_script():
 # ✅ Start the Flask server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+
 
 
 
