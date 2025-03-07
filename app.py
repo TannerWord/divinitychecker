@@ -83,8 +83,17 @@ def get_booking_data():
     days_in_current_month = month_days.get(current_month, 30)
     days_in_next_month = month_days.get(next_month, 30)
 
+    # ✅ Get today's date and filter current month booked dates
+    today = datetime.today()
+    current_day = today.day
+    current_year = today.year
+    current_month_name = today.strftime("%B")
+
+    if current_month == current_month_name:
+        current_month_booked_dates = [date for date in current_month_booked_dates if date >= current_day]
+
     # ✅ Calculate open dates
-    current_month_open_dates = sorted(set(range(1, days_in_current_month + 1)) - set(current_month_booked_dates))
+    current_month_open_dates = sorted(set(range(current_day, days_in_current_month + 1)) - set(current_month_booked_dates))
     next_month_open_dates = sorted(set(range(1, days_in_next_month + 1)) - set(next_month_booked_dates))
 
     # ✅ Calculate booking percentages
@@ -132,6 +141,7 @@ def run_script():
 # ✅ Start the Flask server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+
 
 
 
