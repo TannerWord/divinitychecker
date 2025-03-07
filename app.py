@@ -9,16 +9,20 @@ import subprocess
 
 app = Flask(__name__)
 
-# ✅ Install Chrome from a precompiled source (for Render)
+# ✅ Install Chrome in a writable directory (/tmp/chrome/)
 def install_chrome():
-    chrome_path = "/opt/google/chrome/chrome"
+    chrome_path = "/tmp/chrome/chrome-linux64/chrome"
     if not os.path.exists(chrome_path):
+        print("🔄 Downloading and installing Chrome...")
+        os.makedirs("/tmp/chrome", exist_ok=True)
         subprocess.run(
-            "mkdir -p /opt/google/chrome && curl -o /opt/google/chrome/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chrome-linux64.zip && unzip /opt/google/chrome/chrome.zip -d /opt/google/chrome/ && chmod +x /opt/google/chrome/chrome-linux64/chrome",
+            "curl -Lo /tmp/chrome/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chrome-linux64.zip && unzip /tmp/chrome/chrome.zip -d /tmp/chrome/ && chmod +x /tmp/chrome/chrome-linux64/chrome",
             shell=True,
             check=True
         )
         print("✅ Chrome Installed Successfully")
+
+install_chrome()  # Ensure Chrome is installed
 
 install_chrome()  # Ensure Chrome is installed
 
@@ -31,7 +35,7 @@ def get_booking_data():
     options.add_argument("--headless")  # Run in headless mode (no UI)
     options.add_argument("--no-sandbox")  # Required for running in Render
     options.add_argument("--disable-dev-shm-usage")  # Prevents memory issues
-    options.binary_location = "/opt/google/chrome/chrome-linux64/chrome"  # ✅ New Chrome path
+    options.binary_location = "/tmp/chrome/chrome-linux64/chrome"  # ✅ New Chrome path
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get("https://www.cabinsofthesmokymountains.com/pigeon-forge-cabin-rental/Divinity.html/1229")
