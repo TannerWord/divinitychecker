@@ -22,10 +22,21 @@ def install_chrome():
         )
         print("✅ Chrome Installed Successfully")
 
-install_chrome()  # Ensure Chrome is installed
+# ✅ Install ChromeDriver in a writable directory (/tmp/chromedriver/)
+def install_chromedriver():
+    driver_path = "/tmp/chromedriver/chromedriver-linux64/chromedriver"
+    if not os.path.exists(driver_path):
+        print("🔄 Downloading and installing ChromeDriver...")
+        os.makedirs("/tmp/chromedriver", exist_ok=True)
+        subprocess.run(
+            "curl -Lo /tmp/chromedriver/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chromedriver-linux64.zip && unzip /tmp/chromedriver/chromedriver.zip -d /tmp/chromedriver/ && chmod +x /tmp/chromedriver/chromedriver-linux64/chromedriver",
+            shell=True,
+            check=True
+        )
+        print("✅ ChromeDriver Installed Successfully")
 
 install_chrome()  # Ensure Chrome is installed
-
+install_chromedriver()  # Ensure ChromeDriver is installed
 
 def get_booking_data():
     """Scrapes booking data and returns it as a dictionary"""
@@ -35,9 +46,12 @@ def get_booking_data():
     options.add_argument("--headless")  # Run in headless mode (no UI)
     options.add_argument("--no-sandbox")  # Required for running in Render
     options.add_argument("--disable-dev-shm-usage")  # Prevents memory issues
-    options.binary_location = "/tmp/chrome/chrome-linux64/chrome"  # ✅ New Chrome path
+    options.binary_location = "/tmp/chrome/chrome-linux64/chrome"  # ✅ Correct Chrome binary path
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # ✅ Manually set the correct ChromeDriver version
+    service = Service("/tmp/chromedriver/chromedriver-linux64/chromedriver")
+
+    driver = webdriver.Chrome(service=service, options=options)
     driver.get("https://www.cabinsofthesmokymountains.com/pigeon-forge-cabin-rental/Divinity.html/1229")
 
     # ✅ Wait for the calendar to load
@@ -117,6 +131,7 @@ def run_script():
 # ✅ Start the Flask server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+
 
 
 
