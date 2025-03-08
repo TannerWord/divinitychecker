@@ -2,4 +2,3 @@ flask
 selenium
 webdriver-manager
 gunicorn  # Add this line if missing
-undetected-chromedriver
