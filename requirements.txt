@@ -1,4 +1,4 @@
-flask
+Flask
 selenium
 webdriver-manager
-gunicorn  # Add this line if missing
+gunicorn
