@@ -2,138 +2,107 @@ from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import os
 import subprocess
+import time
 
 app = Flask(__name__)
 
-# ✅ Install Chrome in a writable directory (/tmp/chrome/)
+# ✅ Install Chrome
+CHROME_PATH = "/tmp/chrome/chrome-linux64/chrome"
+CHROMEDRIVER_PATH = "/tmp/chromedriver/chromedriver-linux64/chromedriver"
+
 def install_chrome():
-    chrome_path = "/tmp/chrome/chrome-linux64/chrome"
-    if not os.path.exists(chrome_path):
+    if not os.path.exists(CHROME_PATH):
         print("🔄 Downloading and installing Chrome...")
         os.makedirs("/tmp/chrome", exist_ok=True)
         subprocess.run(
-            "curl -Lo /tmp/chrome/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chrome-linux64.zip && unzip /tmp/chrome/chrome.zip -d /tmp/chrome/ && chmod +x /tmp/chrome/chrome-linux64/chrome",
-            shell=True,
-            check=True
+            "curl -Lo /tmp/chrome/chrome.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chrome-linux64.zip && "
+            "unzip /tmp/chrome/chrome.zip -d /tmp/chrome/ && chmod +x /tmp/chrome/chrome-linux64/chrome",
+            shell=True, check=True
         )
         print("✅ Chrome Installed Successfully")
 
-# ✅ Install ChromeDriver in a writable directory (/tmp/chromedriver/)
 def install_chromedriver():
-    driver_path = "/tmp/chromedriver/chromedriver-linux64/chromedriver"
-    if not os.path.exists(driver_path):
+    if not os.path.exists(CHROMEDRIVER_PATH):
         print("🔄 Downloading and installing ChromeDriver...")
         os.makedirs("/tmp/chromedriver", exist_ok=True)
         subprocess.run(
-            "curl -Lo /tmp/chromedriver/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chromedriver-linux64.zip && unzip /tmp/chromedriver/chromedriver.zip -d /tmp/chromedriver/ && chmod +x /tmp/chromedriver/chromedriver-linux64/chromedriver",
-            shell=True,
-            check=True
+            "curl -Lo /tmp/chromedriver/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chromedriver-linux64.zip && "
+            "unzip /tmp/chromedriver/chromedriver.zip -d /tmp/chromedriver/ && chmod +x /tmp/chromedriver/chromedriver-linux64/chromedriver",
+            shell=True, check=True
         )
         print("✅ ChromeDriver Installed Successfully")
 
-install_chrome()  # Ensure Chrome is installed
-install_chromedriver()  # Ensure ChromeDriver is installed
+install_chrome()
+install_chromedriver()
 
-def get_booking_data():
-    """Scrapes booking data and returns it as a dictionary with booked and open dates and percentages"""
+# 🔗 Website & Credentials
+LOGIN_URL = "https://dilutiontracker.com/login"
+USERNAME = "your_email@example.com"
+PASSWORD = "your_password"
 
-    # ✅ Setup Selenium WebDriver
+def get_driver():
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode (no UI)
-    options.add_argument("--no-sandbox")  # Required for running in Render
-    options.add_argument("--disable-dev-shm-usage")  # Prevents memory issues
-    options.binary_location = "/tmp/chrome/chrome-linux64/chrome"  # ✅ Correct Chrome binary path
-
-    # ✅ Manually set the correct ChromeDriver version
-    service = Service("/tmp/chromedriver/chromedriver-linux64/chromedriver")
-
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.binary_location = CHROME_PATH
+    service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
-    driver.get("https://www.cabinsofthesmokymountains.com/pigeon-forge-cabin-rental/Divinity.html/1229")
+    return driver
 
-    # ✅ Wait for the calendar to load
-    driver.implicitly_wait(5)
+def login(driver):
+    driver.get(LOGIN_URL)
+    wait = WebDriverWait(driver, 10)
+    email_input = wait.until(EC.presence_of_element_located((By.ID, "email")))
+    password_input = wait.until(EC.presence_of_element_located((By.ID, "password")))
+    email_input.send_keys(USERNAME)
+    password_input.send_keys(PASSWORD)
+    login_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Sign in with email')]")))
+    login_button.click()
+    time.sleep(5)
 
-    # ✅ Extract month names dynamically
-    current_month = driver.find_element(By.CLASS_NAME, "monthOneTxt").text.split(" - ")[0]
-    next_month = driver.find_element(By.CLASS_NAME, "monthTwoTxt").text.split(" - ")[0]
-
-    # ✅ Extract booked dates
-    current_month_booked_dates = sorted(
-        [int(td.text.strip()) for td in driver.find_elements(By.CSS_SELECTOR, "#monthOne .bookedDate") if td.text.strip().isdigit()]
-    )
-    next_month_booked_dates = sorted(
-        [int(td.text.strip()) for td in driver.find_elements(By.CSS_SELECTOR, "#monthTwo .bookedDate") if td.text.strip().isdigit()]
-    )
-
-    # ✅ Close the browser
+def scrape_ticker(ticker):
+    driver = get_driver()
+    login(driver)
+    ticker_url = f"https://dilutiontracker.com/app/search/{ticker}?a=231sb8"
+    driver.get(ticker_url)
+    time.sleep(5)
+    
+    def extract_text(by, identifier):
+        try:
+            return driver.find_element(by, identifier).text.strip()
+        except:
+            return "Not Found"
+    
+    data = {
+        "Ticker": extract_text(By.CLASS_NAME, "ticker"),
+        "Market Cap": extract_text(By.XPATH, "//span[contains(text(), 'Mkt Cap')]/following::span[@class='mr-4 pr-1']"),
+        "Float": extract_text(By.XPATH, "//div[@id='company-description-float-wrapper']//span[@class='mr-4 pr-1']"),
+        "Institutional Ownership": extract_text(By.XPATH, "//span[contains(text(), 'Inst Own')]/following::span[1]"),
+        "Overall Risk": extract_text(By.ID, "drOverallRisk"),
+        "Offering Ability": extract_text(By.ID, "drOfferingAbility"),
+        "Historical": extract_text(By.ID, "drHistorical"),
+        "Cash Need": extract_text(By.ID, "drCashNeed"),
+        "Cash Position": extract_text(By.XPATH, "//p[contains(text(), 'Cash Position')]/following-sibling::p"),
+    }
     driver.quit()
-
-    # ✅ Dictionary for number of days in each month
-    month_days = {
-        "January": 31, "February": 29, "March": 31, "April": 30,
-        "May": 31, "June": 30, "July": 31, "August": 31,
-        "September": 30, "October": 31, "November": 30, "December": 31
-    }
-
-    # ✅ Get total days in each month
-    days_in_current_month = month_days.get(current_month, 30)
-    days_in_next_month = month_days.get(next_month, 30)
-
-    # ✅ Get today's date and filter current month booked dates
-    today = datetime.today()
-    current_day = today.day
-    current_year = today.year
-    current_month_name = today.strftime("%B")
-
-    if current_month == current_month_name:
-        current_month_booked_dates = [date for date in current_month_booked_dates if date >= current_day]
-
-    # ✅ Calculate open dates
-    current_month_open_dates = sorted(set(range(current_day, days_in_current_month + 1)) - set(current_month_booked_dates))
-    next_month_open_dates = sorted(set(range(1, days_in_next_month + 1)) - set(next_month_booked_dates))
-
-    # ✅ Calculate booking percentages
-    #percent_current_month_booked = round((len(current_month_booked_dates) / days_in_current_month) * 100, 2)
-    #percent_current_month_open = round((len(current_month_open_dates) / days_in_current_month) * 100, 2)
-
-    percent_next_month_booked = round((len(next_month_booked_dates) / days_in_next_month) * 100, 2)
-    percent_next_month_open = round((len(next_month_open_dates) / days_in_next_month) * 100, 2)
-
-    # ✅ Format dates
-    current_month_booked_formatted = [f"{current_month} {day}" for day in current_month_booked_dates]
-    next_month_booked_formatted = [f"{next_month} {day}" for day in next_month_booked_dates]
-
-    current_month_open_formatted = [f"{current_month} {day}" for day in current_month_open_dates]
-    next_month_open_formatted = [f"{next_month} {day}" for day in next_month_open_dates]
-
-    # ✅ Return the booking data
-    return {
-        "current_month": {
-            "name": current_month,
-            "booked_dates": current_month_booked_formatted,
-            "open_dates": current_month_open_formatted,
-            #"booking_percentage": percent_current_month_booked,
-            #"open_percentage": percent_current_month_open
-        },
-        "next_month": {
-            "name": next_month,
-            "booked_dates": next_month_booked_formatted,
-            "open_dates": next_month_open_formatted,
-            "booking_percentage": percent_next_month_booked,
-            "open_percentage": percent_next_month_open
-        }
-    }
+    return data
 
 # ✅ Webhook Endpoint for n8n
-@app.route('/run_booking_check', methods=['POST'])
-def run_script():
-    """Runs the Selenium script when triggered by a webhook"""
+@app.route('/run_ticker_check', methods=['POST'])
+def run_ticker_check():
     try:
-        data = get_booking_data()
+        request_data = request.get_json()
+        ticker = request_data.get("ticker")
+        if not ticker:
+            return jsonify({"status": "error", "message": "Ticker parameter is required"}), 400
+        data = scrape_ticker(ticker)
         return jsonify({"status": "success", "data": data}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
